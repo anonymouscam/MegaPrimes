@@ -1,147 +1,159 @@
-//package com.fermatslast.MegaPrimes;
+package com.fermatslast.MegaPrimes;
 
+import java.util.BitSet;
 import java.util.Scanner;
 public class Solution {
 	
-	/*
-	 * Given a number n, returns the next closest number only consisting of valid digits 2,3,5,7
-		@param long n (number to find closest number to)
-		@return long (cloest number >= n, consisting of only digits 2,3,5,7)
-	*/
-	private static long getClosest( long n ) {
-		int[] validDigits = new int[]{2,3,5,7};
-		long result = 0L;
-		long clearBefore = 1;
-		
-		boolean carry = false;
-		long temp = n;
-		long mult = 1;
-		while ( temp > 0L ) {
-			
-			long digit = (temp % 10L);
-			if ( carry ) {
-				digit += 1;
-				carry = false;
-			}
-			
-			int j = 0;
-			while ( j < validDigits.length ) {
-				if ( digit < validDigits[j] ) {
-					result += mult * validDigits[j];
-					clearBefore = mult;
-					break;
-				}
-				else if ( digit == validDigits[j] ){
-					result += mult * validDigits[j];
-					break;
-				}
-				else {
-					j++;
-				}
-			}
-			if ( j >= validDigits.length ) {
-				clearBefore = mult * 10;
-				carry = true;
-			}
-			
-			mult *= 10L;
-			temp /= 10L;
-		}
-		if ( carry ) {
-			result += mult * validDigits[0]; 
-			clearBefore = mult;
-		}
-		
-		//zero out digit before clearBefore
-		result -= (result % clearBefore);
-		//replace them with smallest valid digit
-		result += (clearBefore - 1L)/9 * validDigits[0];
-
-		
-		return result;
-	}
+	public static final long maxSize = 1000000;
 	
-	/*
-	 * given a valid number consisting of only 2,3,5,7 returns the next number
-	 * @param long n (number to get the next one from)
-	 * @return long (next valid number > n consisting of only 2,3,5,7
-	 */
-	private static long getNext( long n ) {
-		long result = 0L;
-		
-		long after = 0L;
-		long temp = n;
-		long mult = 1L;
-		boolean carry = true;
-		
-		int[] nextDigit = new int[]{2,2,3,5,5,7,7,2,2,2};
-		boolean[] mustCarry = new boolean[]{false,false,false,false,false,false,false,true,true,true};
-		
-		while ( temp > 0 && carry ) {
-			int digit = (int) (temp % 10);
-			int next = nextDigit[digit];
-			carry = mustCarry[digit];
-			after += mult * next;
-			temp /= 10;
-			mult *= 10;
-		}
-		if ( carry ) {
-			after += mult * nextDigit[0];
-		}
-		result = (n/mult) * mult;
-		result += after;
-		
-		//nums > 10 ending in 2 or 5 are not prime, so skip them 
-		if ( result > 10 ) {
-			long lastdigit = result % 10;
-			if ( lastdigit == 2 ) {
-				result += 1;
-			}
-			else if ( lastdigit == 5 ) {
-				result += 2;
-			}
+	private static boolean isValidNum( long n ) {
+		boolean[] isValid = new boolean[]{false, false, true, true, false, true, false, true, false, false};
+		if ( n == 0 ) {
+			return false;
 		}
 		
-		return result;
-	}
-	
-	private static boolean isPrime( long n ) {
-		if ( n < 2 ) { return false; }
-		if ( n == 2 ) { return true; }
-		if ( n == 3 ) { return true; }
-		if ( n % 2 == 0 ) { return false; }
-		if ( n % 3 == 0 ) { return false; }
-		long i = 5;
-		while ( i * i <= n ) {
-			//6k-1
-			if ( n % i == 0 ) {
+		while (n > 0L ) {
+			int digit = (int) (n % 10L);
+			if ( !isValid[digit] ) {
 				return false;
 			}
-			i += 2;
-			// 6k+1
-			if ( n % i == 0 ) {
-				return false;
-			}
-			//next 6k-1
-			i += 4;
+			n /= 10;
 		}
 		
 		return true;
 	}
+	
+	private static long numValidPrimes( long sieveStart, long sieveEnd, BitSet rootsieve ) {
+		if ( sieveStart > sieveEnd ) {
+			return 0L;
+		}
+		
+		long result = 0L;
+		BitSet segsieve = getSegmentedSieve(rootsieve, sieveStart,sieveEnd );
+		int i = -1;
+		do {
+			i = segsieve.nextSetBit(i+1);
+			if ( i != -1) {
+				if ( isValidNum( i + sieveStart) ) {
+					//System.out.println( "validPrime: " + (i + sieveStart));
+					result++;
+				}
+			}
+		} while (i != -1 ); 
+		
+		return result;
+		
+	}
+	
+	private static long numMegaPrimesR( long prefix, long mult, long start, long end, BitSet rootsieve ) {
+		
+		if ( prefix * mult > end) {
+			return 0L;
+		}
+		if ( ((prefix + 1) * mult - 1) < start ) {
+			return 0L;
+		}
+		
+		if ( mult <= maxSize ) {
+			//calculate for block
+			long sieveStart = Math.max( start, prefix * mult );
+			long sieveEnd = Math.min( end, (prefix + 1) * mult - 1 );
+			
+			return numValidPrimes( sieveStart, sieveEnd, rootsieve );
+		}
+		
+		long result = 0L;
+		long nextMult = mult/10L;
 
+		if ( prefix == 0L ) {
+			result += numMegaPrimesR( prefix * mult + 0, nextMult, start, end, rootsieve );
+		}
+		result += numMegaPrimesR( prefix * 10 + 2, nextMult, start, end, rootsieve  );
+		result += numMegaPrimesR( prefix * 10 + 3, nextMult, start, end, rootsieve  );
+		result += numMegaPrimesR( prefix * 10 + 5, nextMult, start, end, rootsieve  );
+		result += numMegaPrimesR( prefix * 10 + 7, nextMult, start, end, rootsieve  );
+		
+		return result;
+		
+	}
+	
+	private static BitSet getSegmentedSieve( BitSet rootsieve, long start, long end ) {
+		
+		//System.out.printf("segSieve: start: %d end: %d\n", start, end);
+		
+		int n = (int) (end-start+1);
+		BitSet segsieve = new BitSet(n);
+		segsieve.set(0,n);
+		
+		//if segsieve includes numbers < 2, we must clear them
+		for ( long j = start; j < end && j < 2; j++ ) {
+			segsieve.clear((int) (j - start) );
+		}
+		
+		
+		
+		int i = 1;
+		while ( true ) {
+			i = rootsieve.nextSetBit(i+1);
+			if ( i == -1 || i > end ) {
+				break;
+			}
+			
+			long first = (long) Math.ceil( (double)start/(double)i ) * i;
+			if ( first == i ) {
+				first += i;
+			}
+			long last = (end/i) * i;
+			
+			//System.out.printf("prime: %d first: %d last: %d\n", i, first, last);
+			for ( long j = first; j <= last; j += i ) {
+				segsieve.clear((int) (j - start) );
+			}
+			
+		}
+		
+		return segsieve;
+	}
+	
+	private static BitSet getSieve( int n ) {
+		BitSet sieve = new BitSet((int) n+1);
+		sieve.set(0,n+1);
+		sieve.clear(0,2);
+		
+		for ( int i = 2; i <= n; i++ ) {
+			if (sieve.get(i) ) {
+				//i is prime
+				
+				//clear multiples
+				for ( int j = i+i; j <= n; j += i ) {
+					sieve.clear(j);
+				}
+				
+			}
+		}
+		
+		
+		return sieve;
+	}
+	
 	private static long numMegaPrimes(long start, long end) {
 		long result = 0L;
 		
-		long closest = getClosest(start);
-		long i = closest;
-		while ( i <= end ) {
-			if ( isPrime(i) ) {
-				result++;
-			}
-			
-			i = getNext(i);
+		//divide into smaller chunks
+		long mult = 1L;
+		while ( mult < end ) {
+			mult *= 10L;
 		}
+		mult /= 10L;
 		
+		int sqrtn = (int) Math.ceil( Math.sqrt( end ) );
+		BitSet rootsieve = getSieve( sqrtn );
+		
+		result += numMegaPrimesR( 0, mult, start, end, rootsieve );
+		result += numMegaPrimesR( 2, mult, start, end, rootsieve );
+		result += numMegaPrimesR( 3, mult, start, end, rootsieve );
+		result += numMegaPrimesR( 5, mult, start, end, rootsieve );
+		result += numMegaPrimesR( 7, mult, start, end, rootsieve );
 		
 		return result;
 	}
