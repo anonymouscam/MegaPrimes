@@ -1,10 +1,10 @@
-package com.fermatslast.MegaPrimes;
+//package com.fermatslast.MegaPrimes;
 
 import java.util.BitSet;
 import java.util.Scanner;
 public class Solution {
 	
-	public static final long maxSize = 1000000;
+	public static final long maxSize = 1_000_000;
 	
 	private static boolean isValidNum( long n ) {
 		boolean[] isValid = new boolean[]{false, false, true, true, false, true, false, true, false, false};
